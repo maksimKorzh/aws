@@ -5,8 +5,6 @@
 
 **Alternative Web Scraping** is a practical book about web scraping and an alternative approach to building scrapers: running the scraper directly inside the Chrome browser.
 
-This repository contains the complete source of the book. Each chapter is stored as a separate Markdown file.
-
 ## About the Book
 
 Traditional web scraping usually places the scraper outside the browser and attempts to reproduce the browser's behavior.
@@ -84,42 +82,8 @@ https://www.idealista.com/
 
 This demonstrates the same browser-based approach on a real-world website.
 
-## Book Structure
-
-The book is divided into individual Markdown files, with each file representing a chapter or section.
-
-The chapters are intended to be read in order because later chapters build on the concepts and code introduced earlier.
-
-## Author
-
-**Maksym Korzh**
-
-I have worked with web scraping for many years, building scrapers and data-collection systems for real-world projects.
-
-I wrote this book to document the approach described here and to give potential clients an opportunity to see how I approach scraping problems and build practical solutions.
-
-If you have a web-scraping project and would like to discuss it, feel free to contact me directly.
-
-**Email:** maksymkorzh@gmail.com
-
-## Work With Me
-
-I generally work directly with clients rather than through freelance platforms.
-
-I prefer straightforward communication, clearly defined requirements, direct payment, and focused technical work without unnecessary meetings or management overhead.
-
-I generally prefer long-term relationships with clients rather than constantly switching between unrelated short-term projects.
-
-My standard rate is **$50 per hour**.
-
-As a rough reference, a normal Scrapy spider for one category on a website typically takes around this amount of work, while several categories on the same website are often around **$200**, depending on the website and requirements.
-
 ## Support
 
 If you found the book useful and would like to support the project, donations are welcome through PayPal:
 
 **PayPal:** maksymkorzh@gmail.com
-
-## License
-
-See the repository for licensing information.
