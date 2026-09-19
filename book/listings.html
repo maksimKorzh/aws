@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listing Websites — AWS</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+<body>
+    <main class="book">
+        <article class="chapter">
+            <nav class="chapter-nav">
+                <a href="../index.html">← Contents</a>
+            </nav>
+            <div class="chapter-label">Chapter 3</div>
+            <h2>Listing Websites</h2>
+            <p class="lead">Listing websites are one of the most common and useful scraping targets. Real estate, jobs, products, cars, accommodation, classifieds, and many other websites follow a surprisingly similar structure: a collection of items is presented as a list, and each item links to a separate page containing more detailed information.</p>
+            <p>Once you recognize this structure, scraping a listing website becomes much easier to reason about. Instead of thinking about the website as one large page, we can divide the problem into a few distinct steps: find the listing pages, extract the individual item URLs, follow those URLs, extract the details, and continue until all available listings have been processed.</p>
+            <h3>The Listing Structure</h3>
+            <p>A typical listing website has two important types of pages. The first is a <strong>listing page</strong>, which contains multiple items. The second is an <strong>individual listing page</strong>, which contains the complete information about one item.</p>
+            <p>For example, a real estate website might show twenty apartments on a search results page. Each property card contains a title, price, location, image, and a link to the property's individual page. The individual page can then contain dozens of additional fields such as the number of rooms, floor, area, description, amenities, agent information, and property history.</p>
+            <p>This gives us a natural scraping flow:</p>
+            <ol>
+                <li>Start from a search or category URL.</li>
+                <li>Extract the links to individual listings.</li>
+                <li>Visit each listing page.</li>
+                <li>Extract the required fields.</li>
+                <li>Move to the next listing page.</li>
+                <li>Repeat until all pages have been processed.</li>
+            </ol>
+            <h3>A Template I Used for Years</h3>
+            <p>The following scraper is a simplified version of a template I used for years when working with real estate websites. I used variations of this structure to write and maintain numerous property listing scrapers.</p>
+            <p>For one client, I worked with this approach for around three years. For another client, I continued working with it for around four years. Both clients were machine learning engineers working on real estate research projects. They needed enormous amounts of property data to build datasets and train their models, which meant that reliability and maintainability were often more important than making a scraper work once.</p>
+            <p>The template is deliberately straightforward. It separates the process of discovering property URLs from the process of extracting information from an individual property page.</p>
+            <pre><code>########################################################
+#
+# Script to scrape real estate property listings data
+#
+########################################################
+
+# Packages
+import scrapy
+from scrapy.crawler import CrawlerProcess
+from scrapy.selector import Selector
+import json, csv
+import datetime
+
+# Debug mode
+DEBUG = True
+
+# RealEstateScraper scraper class
+class RealEstateScraper(scrapy.Spider):
+    # Scraper name
+    name = 'real-estate-scraper'
+    
+    # Entry point
+    base_url = ''
+
+    # Custom headers
+    headers = {
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36'
+    }
+    
+    # Custom settings
+    custom_settings = {
+        'CONCURRENT_REQUESTS_PER_DOMAIN': 1,
+        'DOWNLOAD_DELAY': 1
+    }
+    
+    # Crawler's entry
+    def start_requests(self):
+        # Init filename
+        is_rent = 'Rent' if 'rent' in self.base_url else 'Sale'
+        filename = './output/Residential_' + is_rent + '_Flats_' + datetime.datetime.today().strftime('%Y-%m-%d-%H-%M') + '.csv'
+        with open(filename, 'w') as f:
+            columns = []
+            f.write(','.join(columns) + '\n')
+
+        # Current page
+        current_page = 1
+      
+        # Crawl next postcode URL
+        yield scrapy.Request(
+            url=self.base_url,
+            headers=self.headers,
+            meta={
+                'filename': filename,
+                'current_page': current_page
+            },
+            callback=self.parse_links
+        )
+    
+    # Parse links
+    def parse_links(self, response):
+        # Extract meta data
+        if DEBUG:
+            with open('links.html') as f: response = Selector(text=f.read())
+        else:
+            filename = response.meta.get('filename')
+            current_page = response.meta.get('current_page')
+
+        # Extract property links
+        links = response.css('a[data-cy="propertyUrl"]::attr(href)').getall() # just a placeholder
+
+        # Loop over property card URLs
+        for card_url in links:
+            print(card_url)
+            # Crawl property listing
+            #yield response.follow(
+            #    url=card_url,
+            #    headers=self.headers,
+            #    meta={ 'filename': filename },
+            #    callback=self.parse_listing
+            #)
+            #break
+ 
+      # Extract total pages
+      try: total_pages = 10
+      except: total_pages = 1
+ 
+      # Handle pagination within each location URL
+      if not DEBUG:
+          # Increment current page counter
+          current_page += 1
+        
+          # Check the if current page is within the legal page range
+          if current_page &lt;= total_pages:
+              # Genrate next page URL
+              split_url = response.url.split('?')
+              next_page = split_url[0] + '?page=' + str(current_page)
+              try:
+                  params = split_url[1]
+                  if 'page' in params: params = '&amp;'.join(params.split('&amp;')[1:])
+                  if len(split_url[1]): next_page += '&amp;' + params
+              except: pass
+              if next_page[-1] == '&amp;': next_page = next_page[:-1]
+            
+            # Print debug information
+            print('PAGE %s | %s' % (current_page, total_pages), next_page)
+
+            # Crawl next page
+            #yield response.follow(
+            #    url=next_page,
+            #    headers=self.headers,
+            #    meta={
+            #        'filename': filename,
+            #        'current_page': current_page
+            #    },
+            #    callback=self.parse_links
+            #)
+
+    # Parse property card listing
+    def parse_listing(self, response):
+        # Work with local copy
+        if DEBUG:
+            with open('listing.html') as f: response = Selector(text=f.read())
+            url = 'N/A'
+        else:
+            filename = response.meta.get('filename')
+            url = response.url
+      
+        # CSV entry
+        features = {
+            'url': url
+        }
+
+        # Print extracted data
+        if DEBUG:
+            print(json.dumps(features, indent=2))
+            print(features.keys())
+        
+        # Write features to output file
+        else:
+            with open(filename, 'a', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, features.keys())
+                writer.writerow(features)
+
+# Main driver
+if __name__ == '__main__':
+    if not DEBUG:
+        # Run scraper
+        process = CrawlerProcess()
+        process.crawl(RealEstateScraper)
+        process.start()
+    else: RealEstateScraper.parse_links(RealEstateScraper, '')</code></pre>
+            <h3>Start With the Listing Page</h3>
+            <p>The first thing I normally look for is the page containing the collection of listings. This is the page that gives the scraper its starting point.</p>
+            <p>In the template, that starting point is represented by <code>base_url</code>. It could be a search URL, a category URL, a location URL, or any other URL that produces a collection of properties.</p>
+            <p>The <code>start_requests()</code> method then creates the initial request and passes it to <code>parse_links()</code>. This creates a clean separation between starting the scraper and processing the listing page.</p>
+            <h3>Extract the Individual URLs</h3>
+            <p>Once the listing page has been loaded, the next question is simple: where are the links to the individual items?</p>
+            <p>In the template, this is represented by:</p>
+            <pre><code>links = response.css('a[data-cy="propertyUrl"]::attr(href)').getall()</code></pre>
+            <p>The selector itself is only a placeholder, because every website has its own HTML structure. The important part is the idea. We are not trying to extract every piece of information from the search results page. We are first interested in finding the URLs that lead to the actual listings.</p>
+            <p>This distinction is useful because listing pages and detail pages usually serve different purposes. The listing page tells us <strong>what exists</strong>, while the individual page tells us <strong>what each item contains</strong>.</p>
+            <h3>Follow the Listing</h3>
+            <p>Once the URLs have been collected, each one can be passed to <code>parse_listing()</code>.</p>
+            <pre><code>yield response.follow(
+    url=card_url,
+    headers=self.headers,
+    meta={ 'filename': filename },
+    callback=self.parse_listing
+)</code></pre>
+            <p>The detail parser can then concentrate entirely on extracting the fields belonging to one property. In a real scraper, the <code>features</code> dictionary might contain dozens of fields rather than just the URL.</p>
+            <pre><code>features = {
+    'url': url,
+    'title': ...,
+    'price': ...,
+    'address': ...,
+    'bedrooms': ...,
+    'bathrooms': ...,
+    'area': ...,
+    'description': ...
+}</code></pre>
+            <p>Keeping this logic separate makes the scraper much easier to understand and maintain. If the website changes its property page layout, the detail parser can be updated without having to redesign the entire crawling process.</p>
+            <h3>Then Deal With Pagination</h3>
+            <p>Finding the listings on the first page is only part of the job. A real estate website may contain thousands or millions of properties distributed across many result pages.</p>
+            <p>The template therefore keeps a <code>current_page</code> value and determines the total number of pages before constructing the next URL.</p>
+            <p>The exact pagination mechanism varies from website to website. Some use URLs such as <code>?page=2</code>, others use path-based URLs, offset parameters, cursor parameters, or completely different mechanisms. The scraper should first understand how the website moves from one batch of listings to the next and then reproduce that mechanism.</p>
+            <h3>Debug Locally Before Crawling</h3>
+            <p>One detail in this template became particularly useful during development: the <code>DEBUG</code> mode.</p>
+            <p>Instead of repeatedly downloading a live page while developing selectors, the scraper can load a previously saved copy of the HTML:</p>
+            <pre><code>if DEBUG:
+    with open('links.html') as f:
+        response = Selector(text=f.read())</code></pre>
+            <p>The same idea is used for an individual property page. This makes selector development much faster and avoids repeatedly requesting the website just to test a small change in the extraction code.</p>
+            <p>For long-running scrapers, this separation between development and production is extremely useful. The scraper can be tested against stable local HTML until the extraction logic works, and only then switched back to live requests.</p>
+            <h3>Think in Two Separate Problems</h3>
+            <p>When approaching a listing website, I find it useful to divide the problem into two independent questions.</p>
+            <ol>
+                <li><strong>How do I discover every listing?</strong></li>
+                <li><strong>How do I extract all the data from each listing?</strong></li>
+            </ol>
+            <p>The first problem is about navigation: entry points, categories, filters, pagination, infinite scrolling, and listing URLs. The second problem is about extraction: identifying the fields, locating their values, cleaning them, and storing them.</p>
+            <p>Keeping these problems separate is one of the main ideas behind the template above. Once the structure of a website is understood, the same basic architecture can be adapted to many different listing sites.</p>
+            <h3>From One Website to Many</h3>
+            <p>The reason this template became valuable over the years was not because it was particularly sophisticated. It was because it provided a repeatable structure for solving many similar problems.</p>
+            <p>Real estate websites may look completely different from one another, but underneath the visual differences they often have the same fundamental structure: search results contain property links, property pages contain fields, and some form of navigation connects the result pages together.</p>
+            <p>Once you start looking at websites in terms of these underlying structures rather than their visual appearance, scraping becomes much more systematic.</p>
+            <p>That way of thinking will be important throughout this book. The goal is not to memorize selectors or techniques for individual websites. It is to learn how to inspect a website, identify how its data is organized, and choose an appropriate way to extract it.</p>
+            <div class="note">
+                <div class="note-title">A Model to Remember</div>
+                <p>Keep this structure in mind throughout the book. Separating listing discovery from individual listing extraction is an important mental model that will help explain many of the design decisions we make later. We will return to this model repeatedly as we move from traditional scraping toward browser-based scraping.</p>
+            </div>
+            <nav class="chapter-nav-bottom">
+                <a href="data.html">← Previous</a>
+                <a href="extensions.html" class="next">Next →</a>
+            </nav>
+        </article>
+    </main>
+</body>
+</html>

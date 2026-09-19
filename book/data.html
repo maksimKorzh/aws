@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Presentation — AWS</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+<body>
+    <main class="book">
+        <article class="chapter">
+            <nav class="chapter-nav">
+                <a href="../index.html">← Contents</a>
+            </nav>
+            <div class="chapter-label">Chapter 2</div>
+            <h2>How Data Appears on the Web</h2>
+            <p class="lead">Before writing a scraper, it is important to understand where the data actually lives. A website may look like a simple document to a human, but the information displayed in a browser can be produced and delivered in many different ways.</p>
+            <p>In the simplest case, the data is already present in the HTML document returned by the server. A request is made to a URL, the server responds with HTML, and the browser displays it. The scraper can download that HTML and extract the information it needs.</p>
+            <h3>Plain HTML</h3>
+            <p>Plain HTML is probably the easiest case for a scraper. The requested page contains the data directly in elements such as headings, paragraphs, links, tables, lists, and other HTML elements.</p>
+            <p>For example, a product page might contain its name, price, description, and other information directly in the returned document. A scraper can request the page, parse the HTML, locate the relevant elements, and extract their contents.</p>
+            <p>This is the basic model that many people have in mind when they first think about web scraping: download a page and read the data from it.</p>
+            <h3>Server-Side Rendering</h3>
+            <p>Many websites do not consist of manually written HTML pages. Instead, the server generates HTML dynamically using a server-side programming language or template engine.</p>
+            <p>A template might contain placeholders for a product name, price, image, or list of articles. When the server receives a request, it fills those placeholders with data and generates the final HTML document that is sent to the browser.</p>
+            <p>From the scraper's perspective, this can still be relatively straightforward. It does not matter whether a human wrote the HTML or a template engine generated it. If the final response contains the data, the scraper can extract it from the response.</p>
+            <h3>Pagination</h3>
+            <p>One page rarely contains all of the available data. Websites commonly divide large collections into multiple pages.</p>
+            <p>A search result might contain twenty items on the first page, followed by links such as <strong>Next</strong>, page numbers, or URLs containing a page parameter. A scraper can follow those links and continue collecting data until there are no more pages.</p>
+            <p>Pagination introduces another problem: the scraper has to understand when the collection is finished. Some websites provide a clear final page, while others continuously generate new page numbers or use less obvious navigation mechanisms.</p>
+            <h3>Infinite Scroll</h3>
+            <p>Modern websites often avoid traditional pagination altogether. Instead, more content appears automatically as the user scrolls down the page.</p>
+            <p>This is commonly called infinite scrolling. Initially, the page might contain only a small number of items. When the user approaches the bottom, the browser loads another batch of data and adds it to the page. The process can repeat indefinitely.</p>
+            <p>For a human, this feels like one continuously growing page. For a scraper, however, there may be no obvious next URL to request. The scraper has to determine how additional data is loaded and reproduce the appropriate behavior.</p>
+            <h3>JavaScript-Rendered Content</h3>
+            <p>Another common approach is to send a relatively small HTML document to the browser and let JavaScript build the actual page.</p>
+            <p>In this situation, the initial HTML response may contain little or none of the information that the user sees. JavaScript executes in the browser, makes additional requests, receives data, and creates or modifies HTML elements on the page.</p>
+            <p>This creates an important distinction between the <strong>HTML source</strong> received from the server and the <strong>DOM</strong> that exists after the browser has executed JavaScript.</p>
+            <p>A traditional scraper that simply downloads the original HTML may therefore see an almost empty page even though a human visitor sees a large amount of information.</p>
+            <h3>APIs</h3>
+            <p>Sometimes the data is not actually delivered as HTML at all. The JavaScript running on the page may communicate with an API and receive structured data, often in JSON format.</p>
+            <p>The browser can then use that response to build the interface shown to the user. In such a case, the information displayed on the page may originate from an API rather than from the HTML document.</p>
+            <p>For a scraper, discovering such an API can be extremely useful. Instead of extracting text from rendered HTML, the scraper can potentially request the structured data directly.</p>
+            <p>However, APIs introduce their own complications. They may require authentication, session information, specific request headers, tokens, parameters, or other state maintained by the browser. Some APIs may also be private implementation details rather than documented public interfaces.</p>
+            <h3>Multiple Layers at Once</h3>
+            <p>Real websites often combine several of these techniques rather than using just one.</p>
+            <p>A website might initially render a page on the server, provide pagination for some sections, use JavaScript to load additional content, request more records from an API when the user scrolls, and maintain the user's state through cookies and browser storage.</p>
+            <p>This means that asking <strong>"Where is the data?"</strong> is often more useful than simply asking <strong>"What HTML should I scrape?"</strong></p>
+            <h3>The Difficulty of the Traditional Approach</h3>
+            <p>Traditional scraping approaches often try to reproduce the process that the website expects from a client. A scraper sends HTTP requests, constructs URLs, manages cookies, parses responses, executes or simulates JavaScript when necessary, discovers API endpoints, handles pagination, and maintains whatever state the website requires.</p>
+            <p>Each additional layer increases the amount of work required to make the scraper behave correctly.</p>
+            <p>Even when the data is publicly visible to a normal visitor, accessing it programmatically can require understanding how the entire website works. A scraper may need to reproduce request headers, session state, API calls, JavaScript-generated parameters, pagination logic, or other browser behavior.</p>
+            <p>This becomes especially difficult when the website changes. A small change to the page structure can break an HTML selector. A new JavaScript application can change how content is loaded. An API can change its parameters. Pagination can be replaced with infinite scrolling. A previously accessible endpoint can start requiring additional browser state.</p>
+            <p>The result is that the scraper can become a second implementation of the website's client-side behavior. Instead of simply collecting data, the scraper increasingly has to understand and reproduce the machinery that a normal browser already handles automatically.</p>
+            <h3>The Browser Already Solves Many of These Problems</h3>
+            <p>This is one of the reasons the browser is interesting as a scraping environment.</p>
+            <p>A normal browser already knows how to request HTML, execute JavaScript, maintain cookies, store local data, follow redirects, render pages, communicate with APIs, and update the DOM as a website changes.</p>
+            <p>Instead of reproducing all of that behavior in a separate scraping application, an alternative approach is to let the browser do what it already does and build the scraper around it.</p>
+            <p>The rest of this book explores what that approach looks like in practice, including how a Chrome extension can access the page, extract data, communicate with the browser, and maintain scraper state using local storage.</p>
+            <nav class="chapter-nav-bottom">
+                <a href="preface.html">← Previous</a>
+                <a href="listings.html" class="next">Next →</a>
+            </nav>
+        </article>
+    </main>
+</body>
+</html>

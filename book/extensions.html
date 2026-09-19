@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extensions & Storage — AWS</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+<body>
+    <main class="book">
+        <article class="chapter">
+            <nav class="chapter-nav">
+                <a href="../index.html">← Contents</a>
+            </nav>
+            <div class="chapter-label">Chapter 4</div>
+            <h2>Chrome Browser Extensions & Local Storage</h2>
+            <p class="lead">Our alternative approach to web scraping is built around two browser capabilities: Chrome extensions and browser local storage. The extension provides the code that runs inside the browser, while local storage gives the scraper a place to remember what it has done.</p>
+            <h3>What Is a Chrome Extension?</h3>
+            <p>A Chrome extension is a small application that extends the functionality of the Chrome browser. Unlike a traditional desktop application, an extension does not run as a completely separate program. It is loaded by the browser and can interact with the browser, its tabs, and the pages that the user visits, depending on the permissions it has been given.</p>
+            <p>This makes extensions particularly interesting for scraping. The browser is already responsible for loading the website, executing JavaScript, maintaining cookies, rendering the page, and communicating with the site's servers. An extension can operate alongside that process instead of trying to reproduce it from outside.</p>
+            <h3>The Manifest</h3>
+            <p>The central configuration file of our scraper extension is JSON manifest file. It tells Chrome what the extension is called, which permissions it needs, what interface it provides, which websites it can operate on, and which JavaScript files should be injected into those pages.</p>
+            <p>This is the <code>manifest.json</code> file for our Listing Scraper project, which defines how our Chrome extension is structured and what it is allowed to do.</p>
+            <pre><code>{
+    "manifest_version": 3,
+    "name": "Web Scraper",
+    "version": "1.0",
+    "permissions": [
+        "storage",
+        "tabs"
+    ],
+    "action": {
+        "default_popup": "menu.html"
+    },
+    "host_permissions": [
+        ""
+    ],
+    "content_scripts": [
+        {
+            "matches": [""],
+            "js": [
+                "scraper.js",
+                "ui.js"
+            ],
+            "run_at": "document_idle"
+        }
+    ]
+}</code></pre>
+            <p>The <code>manifest_version</code> specifies the version of Chrome's extension platform that we are using. Our scraper uses Manifest V3, which is the current extension architecture.</p>
+            <p>The <code>name</code> and <code>version</code> identify the extension. Here our extension is simply called <strong>Web Scraper</strong> and is currently at version <code>1.0</code>.</p>
+            <p>The <code>permissions</code> section requests capabilities that the extension needs. We request <code>storage</code> because the scraper needs to save its configuration and state. The <code>tabs</code> permission allows the extension to work with browser tabs, which becomes useful when controlling and inspecting the pages being scraped.</p>
+            <p>The <code>action</code> defines the extension's browser toolbar interface. When the user clicks the extension icon, Chrome opens <code>menu.html</code> as the popup. This will become the main control panel through which we interact with the scraper.</p>
+            <p>The <code>host_permissions</code> section specifies which websites the extension is allowed to interact with. In the example above the value is left empty because the manifest is being presented as a template. In the actual extension, this is where the permitted website patterns would be defined.</p>
+            <p>The most important part for our scraping logic is <code>content_scripts</code>. Here we tell Chrome which JavaScript files should be automatically loaded into matching web pages.</p>
+            <p>Our extension loads two scripts: <code>scraper.js</code> contains the scraping logic, while <code>ui.js</code> contains the code responsible for interacting with the page and providing the visual scraping interface.</p>
+            <p>The <code>matches</code> field determines which pages receive these scripts. Just as with <code>host_permissions</code>, the empty value shown here is a placeholder for the websites on which our scraper will operate.</p>
+            <p>Finally, <code>run_at</code> is set to <code>document_idle</code>. This tells Chrome to inject the content scripts after the page has finished loading and the browser is idle. For our purposes, this gives the scraper access to a page that has already been loaded into the browser before we begin interacting with it.</p>
+            <p>There is an important architectural detail here: <code>menu.html</code>, <code>scraper.js</code>, and <code>ui.js</code> do different jobs. The popup provides the controls, the content scripts operate on the actual web page, and the manifest connects these pieces to Chrome. We will build each part gradually throughout the book.</p>
+            <h3>Why Extensions Are Interesting for Scraping</h3>
+            <p>A conventional scraper often starts outside the browser. It has to make requests, manage sessions, parse responses, and sometimes reproduce browser behavior.</p>
+            <p>An extension starts from the opposite direction. The browser is already open, the user is already visiting the website, and the page has already been rendered. The extension can work with that existing browser environment.</p>
+            <p>This gives us several useful possibilities. An extension can inspect the DOM, read text and attributes from elements, react to clicks, observe changes to the page, communicate with background code, store data locally, and provide a user interface for controlling the scraper.</p>
+            <p>Most importantly for this book, the extension can allow the user to <strong>visually select elements from the page</strong>. Instead of manually writing a CSS selector for every field, we can build an interface where the user points at an element and clicks it. The extension can then determine which element was selected and use that information as part of the scraper configuration.</p>
+            <p>This changes the role of the scraper from something that must always be programmed manually into something that can be configured interactively.</p>
+            <h3>Visual Selection</h3>
+            <p>Imagine opening a real estate listing and moving the mouse over the property title. The extension could highlight the element under the cursor. The user clicks it, and the extension records enough information to find that element again.</p>
+            <p>The same process could be repeated for the price, address, number of bedrooms, description, or any other field.</p>
+            <p>Later, the scraper can use those selections to extract data from other pages with the same or similar structure.</p>
+            <p>This is one of the main ideas we will build toward in the later chapters. The user should not necessarily need to understand the underlying HTML selector syntax to configure every scraper manually. The browser can provide the visual environment in which those selectors are created.</p>
+<h3>Local Storage</h3>
+<p>Our scraper needs to remember its configuration and progress even when the popup is closed or the browser page changes. We use Chrome's storage API to keep this state locally in the browser.</p>
+<pre><code>{
+    "running": false,
+    "cardUrlSelector": "",
+    "nextPageSelector": "",
+    "currentPage": "",
+    "selectors": {},
+    "listingUrls": [],
+    "listingUrlIndex": -1,
+    "data": []
+}</code></pre>
+        <p>The <code>running</code> value tells us whether the scraper is currently running. The <code>cardUrlSelector</code> stores the selector used to find listing URLs on a listing page, while <code>nextPageSelector</code> identifies the element used to move to the next page.</p>
+        <p>The <code>currentPage</code> value keeps track of the page currently being processed. The <code>selectors</code> object contains the selectors for the individual fields we want to extract from each listing, such as a title, price, or address.</p>
+        <p>The <code>listingUrls</code> array contains the URLs discovered while processing listing pages. The <code>listingUrlIndex</code> tells us which URL we are currently processing, allowing the scraper to keep track of its position in the list.</p>
+        <p>Finally, <code>data</code> contains the information extracted from the individual listings. As the scraper progresses, this array grows until it contains the collected dataset.</p>
+        <p>Chrome provides a simple API for creating, reading, updating, and removing stored values. For example, we can save our scraper state with <code>chrome.storage.local.set()</code>:</p>
+        <pre><code>chrome.storage.local.set({
+    running: false,
+    currentPage: "https://example.com/page/1"
+});</code></pre>
+        <p>We can read values with <code>chrome.storage.local.get()</code>:</p>
+        <pre><code>chrome.storage.local.get(["running", "currentPage"], (result) =&gt; {
+    console.log(result.running);
+    console.log(result.currentPage);
+});</code></pre>
+        <p>We can update an existing value simply by setting it again:</p>
+        <pre><code>chrome.storage.local.set({
+    running: true,
+    currentPage: "https://example.com/page/2"
+});</code></pre>
+        <p>And when a value is no longer needed, we can remove it with <code>chrome.storage.local.remove()</code>:</p>
+        <pre><code>chrome.storage.local.remove("currentPage");</code></pre>
+        <p>This gives our extension a simple way to maintain the scraper's state entirely inside the browser. The configuration, progress, discovered URLs, and collected data can all be stored and updated as the scraper runs.</p>
+            <h3>Local Storage Is Not a Database</h3>
+            <p>Although local storage is useful, it is important to understand its limitations. It is a simple browser storage mechanism, not a replacement for a database.</p>
+            <p>It is best suited to relatively small amounts of client-side state and configuration. It is not designed for storing enormous datasets, complex relationships, or data that needs to be shared between many users or machines.</p>
+            <p>For our purposes, however, this limitation is not necessarily a problem. We can use local storage to remember the <strong>state of the scraper</strong> rather than treating it as the final destination for all scraped data.</p>
+            <h3>The Two Pieces Together</h3>
+            <p>Chrome extensions and local storage complement each other particularly well for the approach developed in this book.</p>
+            <p>The extension gives us code running in the browser and access to the page. It can provide controls, inspect elements, select fields, extract values, and coordinate the scraping process.</p>
+            <p>Local storage gives that extension memory. It allows the scraper to remember its configuration and progress even after the page changes or the browser is restarted.</p>
+            <p>Together, these capabilities give us the foundation for a scraper that can be configured visually, operate directly on rendered web pages, and maintain its state without requiring a separate server.</p>
+            <p>In the following chapters, we will start turning these capabilities into an actual scraping tool.</p>
+            <nav class="chapter-nav-bottom">
+                <a href="listings.html">← Previous</a>
+                <a href="example.html" class="next">Next →</a>
+            </nav>
+        </article>
+    </main>
+</body>
+</html>

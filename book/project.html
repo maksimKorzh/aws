@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Structure — AWS</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+<body>
+    <main class="book">
+        <article class="chapter">
+            <nav class="chapter-nav">
+                <a href="../index.html">← Contents</a>
+            </nav>
+            <div class="chapter-label">Chapter 6</div>
+            <h2>Project Structure</h2>
+
+    <p>We have seen the basic structure of a browser-based scraper. It is now time to turn that example into a complete Chrome extension that we can configure and control without modifying the scraper's source code for every website.</p>
+    <p>The project we are going to build consists of six main files:</p>
+    <ul>
+        <li><code>manifest.json</code> — the extension's configuration file. It tells Chrome how the extension is structured, which permissions it needs, and which files should be loaded.</li>
+        <li><code>menu.html</code> — the HTML for the extension popup. This will contain the controls we use to interact with the scraper.</li>
+        <li><code>menu.css</code> — the styling for the popup interface.</li>
+        <li><code>menu.js</code> — the middleware between the extension interface and the target page. It will handle communication between the popup and the scripts running on the scraped website.</li>
+        <li><code>ui.js</code> — the page-side user interface logic. It will handle the buttons and other controls that we place on the target website while configuring the scraper.</li>
+        <li><code>scraper.js</code> — the main scraping logic. This is responsible for discovering listing URLs, navigating through pages, extracting data, and maintaining the scraper's state.</li>
+    </ul>
+    <p>The relationship between these files is important. The popup provides the controls, the middleware allows the popup to communicate with the page, the page UI provides tools for configuring the scraper, and the scraper itself performs the actual crawling and extraction.</p>
+    <h3>Building It File by File</h3>
+    <p>Rather than presenting the entire extension as one large piece of code, we will build it gradually. We will walk through the source code file by file and see how each part contributes to the complete system.</p>
+    <p>This approach also makes the architecture easier to understand. Every file has a specific responsibility, and as we add functionality we will see how those responsibilities connect together.</p>
+    <h3>Where We Are Going</h3>
+    <p>We will start with a very simple website designed specifically for learning web scraping: <code>quotes.to.scrape.com</code>. This gives us a controlled environment where we can concentrate on the extension itself without immediately dealing with the complexity of a real-world website.</p>
+    <p>Once the extension works there, we will take the same system to a real-world real estate website and use it to collect actual property data. This will give us an opportunity to see how the ideas developed throughout the book apply to a much more realistic scraping task.</p>
+    <p>By the end of the project, we will have gone from a small hard-coded browser scraper to a reusable Chrome extension with a user interface, visual selectors, persistent scraper state, navigation logic, and data collection capabilities.</p>
+    <div class="note">
+        <div class="note-title">The Project Ahead</div>
+        <p>From this point onward, we are no longer just discussing browser-based scraping as an idea. We are going to build the complete extension, one file at a time, and use it first on a simple practice website and then on a real-world real estate website.</p>
+    </div>
+
+            <nav class="chapter-nav-bottom">
+                <a href="example.html">← Previous</a>
+                <a href="next.html" class="next">Next →</a>
+            </nav>
+        </article>
+    </main>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preface — AWS</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+<body>
+    <main class="book">
+        <article class="chapter">
+            <nav class="chapter-nav">
+                <a href="..\index.html">← Contents</a>
+            </nav>
+            <div class="chapter-label">Chapter 1</div>
+            <h2>Preface</h2>
+            <h3>What is Web Scraping</h3>
+            <p class="lead">Web scraping is the process of collecting information from websites automatically. Instead of manually visiting pages, reading their contents, and copying data one page at a time, a scraper performs those repetitive tasks with code.</p>
+            <p>At its simplest, web scraping means turning information presented through a website into data that can be processed, stored, searched, or used somewhere else. That might mean collecting product prices, monitoring news, gathering job listings, building datasets for analysis, or simply obtaining information that would be tedious to collect by hand.</p>
+            <p>There are many ways to build a web scraper. Some run on servers, some use specialized scraping frameworks, and some interact with websites through APIs or browsers. This book explores another possibility: running a scraper directly inside a normal web browser, packaged as a Chrome extension and using local browser storage to keep track of its state.</p>
+            <h3>How I Got Into Web Scraping</h3>
+            <p>My path into web scraping was not planned. In fact, programming itself started as a hobby.</p>
+            <p>I originally began programming because I wanted to learn how to code, and chess was the thing that gave me a reason to do it <code>(by the way I wrote a <a href="https://maksimkorzh.github.io/abc/">book about chess programming</a>)</code>. I was writing a chess program and gradually learning about algorithms, data structures, debugging, and all the other things that come with trying to make a computer play chess.</p>
+            <p>At that time, I was not thinking about making money from programming. Programming was something I was doing because I was curious about it and wanted to understand how things worked.</p>
+            <p>Then one day, a friend told me that he was making money on Fiverr by manually collecting and selling data from websites. That simple conversation introduced me to an idea I had not really considered before: information available on the web could itself be a useful product.</p>
+            <p>I became interested in web scraping and started learning how it worked. The more I explored it, the more interesting it became. Websites contained enormous amounts of structured and semi-structured information, and programming could be used to collect that information instead of doing the work manually.</p>
+            <h3>The First Job</h3>
+            <p>Eventually, I landed my first web scraping job on Upwork.</p>
+            <p>The project involved creating news scrapers and a web application that could run those scrapers directly from a web browser. Looking back, it was quite a complicated project for me at the time. I had no previous professional experience with web scraping, and this was my first real job in the area.</p>
+            <p>Somehow, it went well.</p>
+            <p>That first project was important because it changed web scraping from something I was merely experimenting with into something I could actually do professionally. I continued learning, taking on more projects, and gradually becoming more comfortable with the problems that come with extracting data from real websites.</p>
+            <h3>Turning It Into a Career</h3>
+            <p>Later, I realized that I did not really want to work as a traditional software developer inside a company. I preferred the nature of web scraping projects: each website presented a different problem, the goal was usually concrete, and there was always something new to figure out.</p>
+            <p>I decided that I wanted to make web scraping my full-time work.</p>
+            <p>Around that time, I also started making YouTube videos about web scraping. I shared things I was learning, explained techniques I had discovered, and demonstrated how I approached different scraping problems.</p>
+            <p>Those videos eventually started bringing clients to me. Instead of looking for general programming work, I began working directly with people who needed web scraping and data extraction solutions.</p>
+            <p>Since then, web scraping has been my primary professional focus. What started with curiosity and a conversation with a friend turned into around eight years of practical experience building scrapers for real-world websites.</p>
+            <h3>Why an Alternative Approach?</h3>
+            <p>After working with web scraping for many years, I began to notice a major change in the industry. Websites were becoming increasingly aggressive in detecting and blocking automated scrapers. Techniques that had worked reliably for years were becoming less effective as websites introduced more sophisticated anti-scraping measures.</p>
+            <p>For many websites, trying to reproduce what a real browser does from a separate scraping application became increasingly difficult. Browser fingerprints, JavaScript challenges, behavioral detection, session handling, and other anti-scraping mechanisms could make a scraper fail even when the underlying data was still freely visible to a normal visitor.</p>
+            <p>This started affecting my career as well. Problems that previously could be solved with relatively straightforward scrapers were becoming increasingly difficult to solve reliably. I could see that simply improving the scraper was not always enough. In some cases, the fundamental problem was that the scraper was not actually a browser.</p>
+            <p>This led me to explore a different approach: instead of trying to imitate a browser from outside, why not run the scraper inside the actual browser?</p>
+            <p>A Chrome extension can operate in the same browser environment that a normal user uses to access a website. It can work with the page as it is rendered, use the browser's existing capabilities, and maintain its own state through local browser storage.</p>
+            <p>This does not make every website scrapeable, and it is not a universal solution to anti-scraping systems. However, for certain types of scraping problems, using the actual browser can avoid an entire class of difficulties that arise when trying to reproduce browser behavior from a separate application.</p>
+            <p>This is the idea behind <strong>Alternative Web Scraping</strong>: rather than continually trying to make an external scraper look more like a browser, put the scraper in the browser itself.</p>
+            <h3>Who This Book Is For</h3>
+            <p>This book is written for three somewhat different groups of readers.</p>
+            <ul>
+                <li><strong>Developers</strong> who want to understand web scraping and explore a different architecture for building scrapers.</li>
+                <li><strong>Data scientists</strong> who need to collect information from websites and want to understand the practical side of obtaining that data.</li>
+                <li><strong>Curious people</strong> who have discovered web scraping because they need data for a particular project and want to learn how to collect it themselves.</li>
+            </ul>
+            <p>You do not need to be an experienced web developer to follow the ideas in this book. At the same time, the book will not hide the technical details. The goal is to understand both the general principles of web scraping and the specific techniques required to build browser-based scrapers.</p>
+            <h3>What to Expect</h3>
+            <p>The book begins with the fundamentals: what web scraping is, how websites deliver information, how browsers interact with web pages, and what problems a scraper has to solve.</p>
+            <p>From there, we will explore the alternative approach in more detail. We will build scrapers that run inside the browser, package them as Chrome extensions, interact with web pages, and use local browser storage to maintain state between runs.</p>
+            <p>The intention is not simply to provide a collection of scripts that happen to work. I want to explain the reasoning behind the approach so that you can adapt it to your own scraping problems.</p>
+            <p>I have been doing web scraping for around eight years. This book is an attempt to turn some of the things I have learned through those years of practical work into something that can be studied, experimented with, and built upon.</p>
+            <p>If you have never scraped a website before, this book should give you a place to start. If you already have experience with scraping, I hope the browser-based approach gives you some new ideas.</p>
+            <nav class="chapter-nav-bottom">
+                <a href="../index.html">← CONTENTS</a>
+                <a href="data.html" class="next">Next →</a>
+            </nav>
+        </article>
+    </main>
+</body>
+</html>
