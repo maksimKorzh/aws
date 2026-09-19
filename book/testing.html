@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testing Extension — AWS</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+<body>
+    <main class="book">
+        <article class="chapter">
+            <nav class="chapter-nav">
+                <a href="../index.html">← Contents</a>
+            </nav>
+            <div class="chapter-label">Chapter 10</div>
+            <h2>Testing Extension</h2>
+
+    <p>We have now built all the major pieces of our browser-based scraper. Before moving on, it is time to put everything together and see whether it actually works.</p>
+    <p>Testing a Chrome extension is slightly different from testing a traditional script. Our scraper is not simply a program that starts, processes some input, and exits. It interacts with a web page, changes pages, reloads the browser, stores its state, and continues where it left off.</p>
+    <p>This makes end-to-end testing particularly important. We want to test not only individual functions, but the complete workflow: creating a scraper, selecting the required elements, discovering listing URLs, visiting individual listings, extracting data, navigating through pages, storing the results, and finally downloading the collected data.</p>
+    <h3>Loading the Extension</h3>
+    <p>Because we are developing the extension ourselves, we can load it directly into Chrome without publishing it to the Chrome Web Store.</p>
+    <p>Open Chrome and navigate to <code>chrome://extensions</code>. Enable <strong>Developer mode</strong> and choose <strong>Load unpacked</strong>. Select the directory containing our extension files, including <code>manifest.json</code>, <code>menu.html</code>, <code>menu.css</code>, <code>menu.js</code>, <code>ui.js</code>, and <code>scraper.js</code>.</p>
+    <p>Chrome will then add the extension to the extensions page. From there, the extension can be opened from the browser toolbar and used on web pages just like a normal extension.</p>
+    <p>Whenever we change the extension's source code, we generally need to return to <code>chrome://extensions</code> and press the extension's <strong>Reload</strong> button before testing the new version.</p>
+    <h3>What Should We Test?</h3>
+    <p>A useful way to test our extension is to follow the same structure we used when designing it.</p>
+    <p>First, we test the scraper configuration. Can we create a scraper and define the listing selector? Can we define pagination? Can we visually select the elements we want to extract? Can we save and load the scraper configuration?</p>
+    <p>Next, we test the crawler itself. Does it discover all the listing URLs? Does it visit each listing? Does it extract the selected fields? Does it return to the listing page when it has finished? Does it continue with the next page?</p>
+    <p>Finally, we test persistence. This is particularly important for our architecture because navigation and page reloads are part of the crawling process. The scraper must be able to save its state before leaving a page and recover that state when the next page loads.</p>
+    <div class="note">
+        <div class="note-title">Test the Whole System</div>
+        <p>A scraper can have perfectly working individual functions and still fail as a complete system. In our case, navigation, local storage, selectors, page state, and extraction all depend on one another. End-to-end testing allows us to catch problems that would not be visible when testing functions in isolation.</p>
+    </div>
+    <h3>Our First Test: Quotes</h3>
+    <p>For the first test, we use <code>quotes.toscrape.com</code>. This is an intentionally simple website, which makes it a good environment for testing the complete extension without introducing unnecessary complexity.</p>
+    <p>Rather than filling this chapter with a large collection of screenshots showing every button click, I think there is a better way to demonstrate the process. The following video shows the complete extension being used to scrape the quotes website from beginning to end.</p>
+    <div class="video">
+        <iframe width="560" height="315" src="https://www.youtube.com/embed/8A1PLHHxJX0" title="Scraping quotes.toscrape.com with the Chrome extension" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+    </div>
+    <p>Watch how the scraper is configured, how the selectors are created, and how the extension uses the browser itself to move through the website and collect the data.</p>
+    <h3>But Can We Scrape Something Real?</h3>
+    <p>Our first test proves that the basic mechanism works. But a deliberately simple test website leaves an important question unanswered.</p>
+    <p>Can we use the same idea on a real-world website?</p>
+    <p>Real websites are considerably more complicated. They may have large and changing HTML structures, dynamic content, pagination controls, different types of links, and many other details that do not appear in a small scraping practice site.</p>
+    <p>This is where our browser-based approach becomes much more interesting.</p>
+    <h3>Testing on Idealista</h3>
+    <p>For the second test, we use <code>idealista.com</code>, a real-world real estate website. This is much closer to the kind of website for which the extension was designed.</p>
+    <p>The following video demonstrates the extension being configured and used to scrape real estate listings from Idealista.</p>
+    <div class="video">
+        <iframe width="560" height="315" src="https://www.youtube.com/embed/cRHcJzP3QQM" title="Scraping Idealista with the Chrome extension" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+    </div>
+    <p>The two examples demonstrate the same underlying architecture at two very different levels of complexity. The first confirms that our extension works on a simple, predictable website. The second shows the same browser-based scraper being applied to a real-world website and a much more realistic data-collection task.</p>
+    <p>At this point, the important thing is not simply that we managed to scrape two websites. We have demonstrated the complete idea behind this book: instead of building a separate program that tries to imitate a browser, we can put the scraper inside the browser and let the browser do much of the work for us.</p>
+
+
+
+            <nav class="chapter-nav-bottom">
+                <a href="scraping.html">← Previous</a>
+                <a href="afterword.html" class="next">Next →</a>
+            </nav>
+        </article>
+    </main>
+</body>
+</html>

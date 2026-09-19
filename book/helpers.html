@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helper Functions — AWS</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+<body>
+    <main class="book">
+        <article class="chapter">
+            <nav class="chapter-nav">
+                <a href="../index.html">← Contents</a>
+            </nav>
+            <div class="chapter-label">Chapter 7</div>
+            <h2>Helper Functions</h2>
+            <p>Before we start building the actual scraping functionality, we need a few helper components that connect the different parts of our extension. These files do not scrape data themselves. Instead, they provide the configuration, interface, styling, and communication mechanisms that the scraper will use.</p>
+            <h3>The Manifest</h3>
+            <p>We have already seen <code>manifest.json</code>, but it is worth looking at it again now that the project has more structure. The manifest tells Chrome how to load our extension and which pages our scripts are allowed to operate on.</p>
+            <pre><code>{
+    "manifest_version": 3,
+    "name": "Web Scraper",
+    "version": "1.0",
+    "permissions": [
+        "storage",
+        "tabs"
+    ],
+    "action": {
+        "default_popup": "menu.html"
+    },
+    "host_permissions": [
+        "&lt;all_urls&gt;"
+    ],
+    "content_scripts": [
+        {
+            "matches": ["&lt;all_urls&gt;"],
+            "js": [
+                "scraper.js",
+                "ui.js"
+            ],
+            "run_at": "document_idle"
+        }
+    ]
+}</code></pre>
+            <p>The important change compared with the earlier template is that we now use <code>&lt;all_urls&gt;</code>. This allows our extension to operate on any website. That is useful for a general-purpose scraper because we do not want to modify the extension manifest every time we want to scrape a different website.</p>
+            <p>The manifest also tells Chrome to load <code>scraper.js</code> and <code>ui.js</code> into matching pages after the page has loaded. The popup itself is <code>menu.html</code>, which will be opened when the user clicks the extension icon.</p>
+            <h3>The Menu</h3>
+            <p><code>menu.html</code> defines the interface that appears when we open the extension popup. We divide the controls into three sections: scraper management, selectors, and storage.</p>
+            <pre><code>&lt;html&gt;
+    &lt;head&gt;
+        &lt;link rel="stylesheet" href="menu.css"&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+        &lt;div class="section"&gt;
+            &lt;div class="section-title"&gt;Scraper&lt;/div&gt;
+            &lt;div class="button-row"&gt;
+                &lt;button id="create"&gt;Create Scraper&lt;/button&gt;
+                &lt;button id="remove"&gt;Remove Scraper&lt;/button&gt;
+            &lt;/div&gt;
+            &lt;div class="button-row"&gt;
+                &lt;button id="load"&gt;Load Scraper&lt;/button&gt;
+                &lt;button id="save"&gt;Save Scraper&lt;/button&gt;
+                &lt;input type="file" id="file" hidden&gt;
+            &lt;/div&gt;
+            &lt;div class="button-row"&gt;
+                &lt;button id="start"&gt;Start Scraper&lt;/button&gt;
+                &lt;button id="stop"&gt;Stop Scraper&lt;/button&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="section"&gt;
+            &lt;div class="section-title"&gt;Selectors&lt;/div&gt;
+            &lt;div class="button-row"&gt;
+                &lt;button id="links"&gt;Set Listings&lt;/button&gt;
+                &lt;button id="pagination"&gt;Set Pagination&lt;/button&gt;
+            &lt;/div&gt;
+            &lt;div class="button-row"&gt;
+                &lt;button id="select"&gt;Select Element&lt;/button&gt;
+                &lt;button id="deselect"&gt;Remove Element&lt;/button&gt;
+            &lt;/div&gt;
+            &lt;div class="button-row"&gt;
+                &lt;button id="done"&gt;Done Selecting&lt;/button&gt;
+                &lt;button id="preview"&gt;Preview Data&lt;/button&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="section"&gt;
+            &lt;div class="section-title"&gt;Storage&lt;/div&gt;
+            &lt;div class="button-row"&gt;
+                &lt;button id="download"&gt;Download Data&lt;/button&gt;
+                &lt;button id="clear"&gt;Clear Data&lt;/button&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;script src="menu.js"&gt;&lt;/script&gt;
+    &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+            <p>The buttons are deliberately given meaningful IDs such as <code>create</code>, <code>start</code>, <code>links</code>, and <code>download</code>. These IDs will later become the connection between the visible button and the action that should be performed.</p>
+            <p>Notice that the HTML itself contains very little application logic. It describes what the user can do, while <code>menu.js</code> will handle what happens when a button is clicked.</p>
+            <h3>The Menu Styling</h3>
+            <p><code>menu.css</code> controls the appearance of the popup. There is nothing particularly scraper-specific here; its job is simply to make the controls compact and readable.</p>
+            <pre><code>* {
+    box-sizing: border-box;
+}
+
+html {
+    width: 400px;
+    margin: 0;
+    overflow: auto;
+}
+
+body {
+    padding: 12px;
+    background: #f5f5f7;
+    color: #222;
+    font-family: Arial, sans-serif;
+}
+
+.section {
+    margin-top: 12px;
+}
+
+.section-title {
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: bold;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.button-row {
+    margin: 0px;
+    padding: 0px;
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+}
+
+button, a.button {
+    display: block;
+    width: 100%;
+    margin-top: 6px;
+    padding: 9px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    background: white;
+    color: #222;
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    line-height: normal;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+button:hover, a.button:hover {
+    background: #eeeeee;
+    border-color: #bbb;
+}
+
+button:active, a.button:active {
+    background: #e2e2e2;
+}</code></pre>
+            <p>The important thing to understand is the separation of responsibilities. <code>menu.html</code> describes the interface, while <code>menu.css</code> determines how that interface looks. Neither file needs to know anything about how scraping works.</p>
+            <h3>Communicating With the Target Page</h3>
+            <p>This leaves us with <code>menu.js</code>. The popup runs in its own extension context, while <code>scraper.js</code> and <code>ui.js</code> run inside the target web page. They are separate environments, so the popup cannot simply call functions defined by the scripts on the page.</p>
+            <p>Our solution is to send messages to the active tab. The message contains an <code>action</code> value, and the scripts running on the target page can respond to that action.</p>
+            <pre><code>const fileInput = document.getElementById("file");
+
+document.getElementById("load").onclick = () =&gt; {
+    fileInput.click();
+};
+
+fileInput.onchange = async () =&gt; {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+    }); chrome.tabs.sendMessage(tab.id, { action: await file.text() });
+};
+
+for (let btn of document.getElementsByTagName("button")) {
+    if (btn.id == "load") continue;
+    let action = btn.id;
+    document.getElementById(action).onclick = async () =&gt; {
+        const [tab] = await chrome.tabs.query({
+            active: true,
+            currentWindow: true
+        }); chrome.tabs.sendMessage(tab.id, { action: action });
+    };
+}</code></pre>
+            <p>The first part handles the hidden file input used by the <code>Load Scraper</code> button. Clicking the button programmatically opens the browser's file picker. Once a file is selected, its contents are read and sent to the active tab.</p>
+            <p>The more interesting part is the loop at the end. Instead of writing a separate click handler for every button, we loop through all buttons and use each button's ID as the action name.</p>
+            <p>For example, clicking the button with <code>id="start"</code> results in a message containing <code>{ action: "start" }</code>. Clicking <code>id="links"</code> produces <code>{ action: "links" }</code>. The same mechanism works for all of the other buttons.</p>
+            <p>We first find the active browser tab with <code>chrome.tabs.query()</code> and then send the message to that tab using <code>chrome.tabs.sendMessage()</code>. The scripts running on the target page can listen for these messages and decide what to do with them.</p>
+            <h3>A Simple Communication Model</h3>
+            <p>At this point, we can think of the extension as having two sides. The popup is where the user clicks buttons, while the target page is where the actual scraper operates.</p>
+            <p><code>menu.html</code>, <code>menu.css</code>, and <code>menu.js</code> form the popup side. The manifest loads <code>scraper.js</code> and <code>ui.js</code> into the target page. <code>menu.js</code> then acts as the communication bridge between the two.</p>
+            <div class="note">
+                <div class="note-title">A Useful Pattern</div>
+                <p>The button ID becomes the message action. This gives us a simple convention: the popup does not need to know how an operation works; it only needs to tell the page which operation the user requested. The page-side scripts can then implement that operation.</p>
+            </div>
+            <p>These helper files give us the foundation for the rest of the project. The interface exists, the popup can communicate with the active page, and Chrome knows which scripts to inject. We can now move on to the code that actually makes the scraper configurable and usable.</p>
+            <nav class="chapter-nav-bottom">
+                <a href="project.html">← Previous</a>
+                <a href="ui.html" class="next">Next →</a>
+            </nav>
+        </article>
+    </main>
+</body>
+</html>

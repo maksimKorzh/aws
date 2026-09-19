@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extension UI — AWS</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+<body>
+    <main class="book">
+        <article class="chapter">
+            <nav class="chapter-nav">
+                <a href="../index.html">← Contents</a>
+            </nav>
+            <div class="chapter-label">Chapter 8</div>
+            <h2>Extension User Interface</h2>
+            <p>We have already built the popup that controls our extension. Now we need the other side of that interface: the code that runs directly on the target website. This is the job of <code>ui.js</code>.</p>
+            <p>The purpose of <code>ui.js</code> is to provide the tools we need while configuring a scraper. It creates and manages scraper state, lets us define listing and pagination selectors, allows us to visually select elements from the page, previews extracted data, and handles saving and loading scraper configurations.</p>
+            <p>The file is also responsible for receiving the messages sent by <code>menu.js</code>. The popup tells the page what the user wants to do, and <code>ui.js</code> calls the appropriate function.</p>
+            <h3>Receiving Commands</h3>
+            <pre><code>var highlighted = null;
+
+chrome.runtime.onMessage.addListener((message) =&gt; {
+    if (message.action == "create") createScraper();
+    else if (message.action == "remove") removeScraper();
+    else if (message.action == "start") startScraper();
+    else if (message.action == "stop") stopScraper();
+    else if (message.action == "download") downloadData();
+    else if (message.action == "clear") clearData();
+    else if (message.action == "links") setListings();
+    else if (message.action == "pagination") setPagination();
+    else if (message.action == "select") selectElements();
+    else if (message.action == "deselect") removeElements();
+    else if (message.action == "done") stopSelecting();
+    else if (message.action == "preview") previewData();
+    else if (message.action == "save") saveScraper();
+    else loadScraper(message.action);
+});</code></pre>
+            <p>The message listener is the entry point for the page UI. Whenever <code>menu.js</code> sends a message, this listener examines its <code>action</code> property and calls the corresponding function.</p>
+            <p>For example, the <code>Start Scraper</code> button sends the action <code>start</code>, which calls <code>startScraper()</code>. The <code>Select Element</code> button sends <code>select</code>, which calls <code>selectElements()</code>.</p>
+            <p>The final <code>else</code> is used for loading a saved scraper. In that case the message itself contains the JSON representation of the scraper rather than one of the predefined action names.</p>
+            <h3>Creating a Scraper</h3>
+            <pre><code>function createScraper() {
+    if (scraperIsRunning()) {
+        alert("Cannot create scraper while scraper is running");
+        return;
+    } else if (!scraperExists()) {
+        setScraper({
+            "running": false,
+            "cardUrlSelector": "",
+            "nextPageSelector": "",
+            "currentPage": "",
+            "selectors": {},
+            "listingUrls": [],
+            "listingUrlIndex": -1,
+            "data": []
+        }); alert("Scraper has been created");
+    } else alert("Scraper already exists");
+}</code></pre>
+            <p><code>createScraper()</code> initializes a new scraper configuration. Before doing anything, it checks whether another scraper is currently running. Creating a new configuration while the scraper is running could destroy its state, so the operation is refused.</p>
+            <p>If no scraper exists, the function creates the state structure we introduced earlier. The selectors are initially empty, the listing URL array contains no URLs, and <code>listingUrlIndex</code> starts at <code>-1</code>.</p>
+            <h3>Removing a Scraper</h3>
+            <pre><code>function removeScraper() {
+    if (scraperIsRunning()) {
+        alert("Cannot remove scraper while scraper is running");
+        return;
+    } else if (scraperExists()) {
+        localStorage.removeItem("scraper");
+        alert("Scraper has been removed");
+    } else alert("Scraper doesn't exist");
+}</code></pre>
+            <p><code>removeScraper()</code> does the opposite. It removes the scraper state from local storage, but only when the scraper is stopped. This protects the running scraper from having its configuration deleted accidentally.</p>
+            <h3>Starting and Stopping</h3>
+            <pre><code>function startScraper() {
+    if (!scraperExists()) alert("Scraper doesn't exist");
+    else if (scraperIsRunning()) alert("Scraper is already running");
+    else {
+        let scraper = getScraper();
+        scraper.running = true;
+        setScraper(scraper);
+        alert("Scraper has been started");
+        location.reload();
+    }
+}</code></pre>
+            <p><code>startScraper()</code> checks that a scraper exists and is not already running. It then changes the <code>running</code> flag to <code>true</code>, saves the updated state, and reloads the page.</p>
+            <p>The reload is important because <code>scraper.js</code> will inspect the stored state when the page loads. Once it sees that <code>running</code> is true, it can begin the scraping process.</p>
+            <pre><code>function stopScraper() {
+    if (!scraperExists()) alert("Scraper doesn't exist");
+    else if (!scraperIsRunning()) alert("Scraper has already been stopped");
+    else {
+        let scraper = getScraper();
+        scraper.running = false;
+        setScraper(scraper);
+        alert("Scraper has been stopped");
+    }
+}</code></pre>
+            <p><code>stopScraper()</code> simply changes the same flag back to <code>false</code>. The scraper can then see that it should no longer continue processing pages.</p>
+            <h3>Downloading Data</h3>
+            <pre><code>function downloadData() {
+    if (scraperIsRunning()) {
+        alert("Cannot download data while scraper is running");
+        return;
+    } else if (scraperExists()) {
+        let data = getScraper().data;
+        const blob = new Blob(
+            [JSON.stringify(data, null, 2)],
+            { type: "text/json;charset=utf-8" }
+        ); const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "listing-" + Date().toString().split(" ").slice(0, 5).join("-") + ".json";
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+}</code></pre>
+            <p><code>downloadData()</code> turns the collected data into a downloadable JSON file. The data is converted to a JSON string and placed inside a <code>Blob</code>, which allows the browser to treat it as a file.</p>
+            <p>A temporary object URL is then created for the blob. We create an invisible download link, assign the URL to it, and programmatically click the link. Finally, <code>URL.revokeObjectURL()</code> releases the temporary URL.</p>
+            <h3>Clearing Data</h3>
+            <pre><code>function clearData() {
+     if (scraperIsRunning()) {
+        alert("Cannot clear data while scraper is running");
+        return;
+    } else if (scraperExists()) {
+        let scraper = getScraper();
+        scraper.data = [];
+        setScraper(scraper);
+        alert("Scraper data has been cleared");
+    }
+}</code></pre>
+            <p><code>clearData()</code> removes only the collected results. The scraper configuration remains intact, so selectors and other settings can be reused for another run.</p>
+            <h3>Setting Listing URLs</h3>
+            <pre><code>function setListings() {
+    if (scraperIsRunning()) {
+        alert("Cannot set listings while scraper is running");
+        return;
+    } else if (scraperExists()) {
+        stopSelecting();
+        let scraper = getScraper();
+        let cardUrlSelector = "";
+        while (cardUrlSelector == "")
+            try {
+                cardUrlSelector = prompt(
+                    "Paste card URL selector:\n\n" +
+                    "1. Open DevTools\n" + 
+                    "2. Rightclick listing card\n" +
+                    "3. Find &lt;a href=\"path/to/listing.html\"&gt;\n" +
+                    "4. Rightclick element, select Copy -&gt; Copy selector\n" +
+                    "5. Paste selector below\n\n" +
+                    "e.g. body &gt; div &gt; div:nth-child(1) &gt; span:nth-child(2) &gt; a"
+                ).replace(/:nth-child\(\d+\)/g, "");
+            } catch(e) { return; }
+        let listingUrls = extractListingUrls(cardUrlSelector);
+        if (confirm("Do you confirm extracted links?\n\n" + listingUrls)) {
+            scraper.cardUrlSelector = cardUrlSelector;
+            setScraper(scraper);
+        }
+    } else alert("Scraper doesn't exist");
+}</code></pre>
+            <p><code>setListings()</code> defines how the scraper finds individual listing URLs on a listing page. For this version, the user obtains a CSS selector using Chrome DevTools and pastes it into the prompt.</p>
+            <p>The selector is passed to <code>extractListingUrls()</code>, which tests it against the current page and returns the URLs it finds. The user gets a chance to inspect the result before the selector is stored in <code>cardUrlSelector</code>.</p>
+            <p>The <code>:nth-child()</code> portions are removed from the selector because they often make selectors unnecessarily specific. We will later build a more convenient visual selector mechanism that removes the need for this manual DevTools workflow.</p>
+            <h3>Setting Pagination</h3>
+            <pre><code>function setPagination() {
+    if (scraperIsRunning()) {
+        alert("Cannot set pagination while scraper is running");
+        return;
+    } else if (scraperExists()) {
+        stopSelecting();
+        let scraper = getScraper();
+        let nextPageSelector = "";
+        while (nextPageSelector == "") nextPageSelector = prompt(
+            "Paste next page selector:\n\n" +
+            "1. Open DevTools\n" + 
+            "2. Rightclick next page button" +
+            "3. Find &lt;a href=\"path/to/next_page.html\"&gt; or &lt;button&gt;Next&lt;/button&gt;\n" +
+            "4. Rightclick element, select Copy -&gt; Copy selector\n" +
+            "5. Paste selector below\n\n" +
+            "e.g. body &gt; div &gt; div:nth-child(2) &gt; div.col-md-8 &gt; nav &gt; ul &gt; li &gt; a"
+        );
+        let nextPage = extractNextPage(nextPageSelector);
+        if (confirm("Do you confirm next page?\n\n" + nextPage)) {
+            scraper.nextPageSelector = nextPageSelector;
+            setScraper(scraper);
+        }
+    } else alert("Scraper doesn't exist");
+}</code></pre>
+            <p><code>setPagination()</code> works in almost exactly the same way, except that it defines the selector used to find the next listing page. The selector is tested with <code>extractNextPage()</code>, and once confirmed it is saved as <code>nextPageSelector</code>.</p>
+            <p>Together, <code>cardUrlSelector</code> and <code>nextPageSelector</code> describe the navigation structure of the listing website we discussed earlier: one selector discovers the listings, while the other tells us how to move through the listing pages.</p>
+            <h3>Starting Element Selection</h3>
+            <pre><code>function selectElements() {
+    if (scraperIsRunning()) {
+        alert("Cannot select elements while scraper is running");
+        return;
+    } else if (scraperExists()) {
+        stopSelecting();
+        document.addEventListener("mouseover", mouseover, true);
+        document.addEventListener("click", clickAddSelector, true);
+        alert("Select elements you want to extract text from");
+    } else alert("Scraper doesn't exist");
+}</code></pre>
+            <p><code>selectElements()</code> enables the visual element-selection mode. It first removes any existing selection handlers and then attaches two event listeners to the document.</p>
+            <p>The <code>mouseover</code> listener highlights elements as the mouse moves over them. The <code>click</code> listener records an element when the user clicks it.</p>
+            <h3>Removing Selected Elements</h3>
+            <pre><code>function removeElements() {
+    if (scraperIsRunning()) {
+        alert("Cannot remove elements while scraper is running");
+        return;
+    } else if (scraperExists()) {
+        alert("Remove elements you don't need");
+        stopSelecting();
+        document.addEventListener("mouseover", mouseover, true);
+        document.addEventListener("click", clickRemoveSelector, true);
+    } else alert("Scraper doesn't exist");
+}</code></pre>
+            <p><code>removeElements()</code> uses the same visual interface but switches the click handler. Instead of adding a selector, clicking a previously selected element removes its selector from the scraper configuration.</p>
+            <h3>Previewing Data</h3>
+            <pre><code>function previewData() {
+    if (scraperIsRunning()) {
+        alert("Cannot preview data while scraper is running");
+        return;
+    } else if (scraperExists()) {
+        try {
+            let scraper = getScraper();
+            let message = "";
+            let listingUrls = extractListingUrls(scraper.cardUrlSelector);
+            let nextPage = extractNextPage(scraper.nextPageSelector);
+            let data = JSON.stringify(extractData(), null, 4);
+            if (listingUrls != "") message += "Listing URLs:\n\n" + listingUrls + "\n\n";
+            if (nextPage != "" && nextPage != null) message += "Next Page:\n\n" + nextPage + "\n\n";
+            if (data != "{}") message += "Extracted data:\n\n" + data;
+            alert(message);
+        } catch(e) { alert("Nothing has been selected"); }
+    } else alert("Scraper doesn't exist");
+}</code></pre>
+            <p><code>previewData()</code> is useful while configuring a scraper because it lets us test the current configuration without starting the entire crawling process. It checks the listing selector, pagination selector, and data selectors against the current page and displays the results.</p>
+            <p>This is especially useful for debugging selectors. We can configure the scraper, preview what it would extract, adjust the selectors if necessary, and only then start the actual crawl.</p>
+            <h3>Loading a Scraper</h3>
+            <pre><code>function loadScraper(scraper) {
+    if (scraperIsRunning()) {
+        alert("Cannot load scraper while scraper is running");
+        return;
+    } else {
+        try {
+            let newScraper = JSON.parse(scraper);
+            setScraper(newScraper);
+            alert("Scraper has been loaded");
+        } catch(e) { alert("Failed loading scraper"); }
+    }
+}</code></pre>
+            <p><code>loadScraper()</code> receives a JSON string, converts it back into a JavaScript object with <code>JSON.parse()</code>, and stores it as the current scraper configuration.</p>
+            <p>This means a scraper configuration can be saved to a file and later loaded again. We do not have to configure all of the selectors from scratch every time we want to use the scraper.</p>
+            <h3>Saving a Scraper</h3>
+            <pre><code>function saveScraper() {
+    if (scraperIsRunning()) {
+        alert("Cannot download data while scraper is running");
+        return;
+    } else if (scraperExists()) {
+        let data = getScraper();
+        const blob = new Blob(
+            [JSON.stringify(data, null, 2)],
+            { type: "text/json;charset=utf-8" }
+        ); const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "scraper.json";
+        link.click();
+        URL.revokeObjectURL(url);
+    } else alert("Scraper doesn't exist");
+}</code></pre>
+            <p><code>saveScraper()</code> is the reverse of loading. It takes the complete scraper object from local storage, converts it to formatted JSON, and downloads it as <code>scraper.json</code>.</p>
+            <p>Notice the difference between saving the scraper and downloading the data. The scraper file contains the configuration and state, while the downloaded data contains the listings that have actually been collected.</p>
+            <h3>Stopping Selection Mode</h3>
+            <pre><code>function stopSelecting() {
+    if (scraperIsRunning()) {
+        alert("Cannot stop selecting while scraper is running");
+        return;
+    } else if (scraperExists()) {
+        document.removeEventListener("mouseover", mouseover, true);
+        document.removeEventListener("click", clickAddSelector, true);
+        document.removeEventListener("click", clickRemoveSelector, true);
+    } else alert("Scraper doesn't exist");
+}</code></pre>
+            <p><code>stopSelecting()</code> disables the visual selection interface by removing the event listeners that were added by <code>selectElements()</code> and <code>removeElements()</code>.</p>
+            <p>Calling this before starting another selection mode is important because otherwise multiple click handlers could remain active at the same time.</p>
+            <h3>Highlighting Elements</h3>
+            <pre><code>function mouseover(e) {
+    if (highlighted) {
+        if (highlighted.style.outline == "green solid 2px") {
+            highlighted = null;
+            return;
+        } highlighted.style.outline = "";
+    }
+    if (e.target.style.outline != "green solid 2px") {
+        highlighted = e.target;
+        highlighted.style.outline = "2px solid red";
+    }
+}</code></pre>
+            <p>The <code>mouseover()</code> function provides the visual feedback that makes element selection possible. The global <code>highlighted</code> variable remembers the element currently under the mouse.</p>
+            <p>When the mouse moves to another element, the previous temporary highlight is removed and the new element receives a red outline. Elements that have already been selected receive a green outline and are deliberately left alone.</p>
+            <h3>Selecting an Element</h3>
+            <pre><code>function clickAddSelector(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    let scraper = getScraper();
+    let selector = getCssSelector(e.target);
+    if (e.target.style.outline == "green solid 2px") {
+        alert("You have already selected this element");
+        return;
+    }
+    e.target.style.outline = "2px solid green";
+    let name = prompt("How would you call this selector?");
+    try {
+        while (name == "" || scraper.selectors[name] != undefined) {
+            alert(`Invalid name "${name}"`);
+            name = prompt("How would you call this selector?");
+        }
+    } catch(e) {}
+    scraper.selectors[name] = selector;
+    setScraper(scraper);
+}</code></pre>
+            <p>When an element is clicked, <code>clickAddSelector()</code> prevents the normal browser click behavior and stops the event from propagating to other elements.</p>
+            <p>It then calls <code>getCssSelector()</code> to generate a CSS selector describing the clicked element. The element is given a green outline to show that it has been selected, and the user is asked to give the selector a name such as <code>title</code>, <code>price</code>, or <code>address</code>.</p>
+            <p>The name must be unique because it becomes a key in the scraper's <code>selectors</code> object. Finally, the selector is stored in local storage as part of the scraper configuration.</p>
+            <h3>Removing an Element</h3>
+            <pre><code>function clickRemoveSelector(e) {
+    if (e.target.style.outline == "green solid 2px") {
+        let scraper = getScraper();
+        let selector = getCssSelector(e.target);
+        for (let key of Object.keys(scraper.selectors)) {
+            if (scraper.selectors[key] == selector) {
+                delete scraper.selectors[key];
+                alert(`Selector "${key}" has been removed`);
+            }
+        } e.target.style.outline = "";
+        setScraper(scraper);
+    } else { alert("There is no such selector"); }
+}</code></pre>
+            <p><code>clickRemoveSelector()</code> performs the reverse operation. It checks whether the clicked element has a green selection outline, generates its CSS selector, and searches through the configured selectors for a matching value.</p>
+            <p>Once it finds the matching selector, the corresponding key is deleted from the scraper configuration and the green outline is removed from the element.</p>
+            <h3>The Complete Selection Workflow</h3>
+            <p>These functions work together to create the visual selector workflow. The user clicks <strong>Select Element</strong>, moves the mouse over the page to see elements highlighted, and clicks the elements whose text should be extracted. Each selected element is assigned a name and its CSS selector is stored in the scraper configuration.</p>
+            <p>If a selection is no longer needed, <strong>Remove Element</strong> switches the click behavior so that selected elements can be removed. <strong>Done Selecting</strong> then removes the event listeners and returns the page to its normal state.</p>
+            <div class="note">
+                <div class="note-title">The Important Transition</div>
+                <p>This is where our project starts becoming more than a hard-coded scraper. Instead of editing JavaScript whenever we want to scrape a new website, the extension can now store the website-specific configuration separately from the scraping code. The same scraper can therefore be configured for different websites.</p>
+            </div>
+            <p>There are still several helper functions used by <code>ui.js</code>, such as <code>getScraper()</code>, <code>setScraper()</code>, <code>scraperExists()</code>, <code>scraperIsRunning()</code>, <code>extractListingUrls()</code>, <code>extractNextPage()</code>, <code>extractData()</code>, and <code>getCssSelector()</code>. These will be implemented as part of the remaining scraper functionality.</p>
+            <p>For now, the important architecture is clear: <code>menu.js</code> sends commands, <code>ui.js</code> turns those commands into actions on the target page, and the scraper configuration is persisted in local storage. The next step is to look at the helper functions that make this interaction possible.</p>
+            <nav class="chapter-nav-bottom">
+                <a href="helpers.html">← Previous</a>
+                <a href="scraping.html" class="next">Next →</a>
+            </nav>
+        </article>
+    </main>
+</body>
+</html>

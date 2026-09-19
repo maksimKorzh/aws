@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actual Scraping — AWS</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+<body>
+    <main class="book">
+        <article class="chapter">
+            <nav class="chapter-nav">
+                <a href="../index.html">← Contents</a>
+            </nav>
+            <div class="chapter-label">Chapter 9</div>
+            <h2>Actual Scraping</h2>
+            <p>We have built the extension interface and the tools for configuring a scraper. Now we can look at the part that actually performs the crawl. This is the job of <code>scraper.js</code>.</p>
+            <p>The important thing to notice is that <code>scraper.js</code> does not need to know which website we are scraping. It reads the configuration stored by the UI and uses that configuration to discover listings, navigate between pages, extract data, and maintain its progress.</p>
+            <h3>Scraper State Helpers</h3>
+            <pre><code>const DELAY = 3000;
+
+function getScraper() {
+    return JSON.parse(localStorage.getItem("scraper"));
+}
+
+function setScraper(scraper) {
+    localStorage.setItem("scraper", JSON.stringify(scraper));
+}
+
+function scraperExists() {
+    if (getScraper() == null) return false;
+    else return true;
+}
+
+function scraperIsRunning() {
+    if (scraperExists()) {
+        let scraper = getScraper();
+        return scraper.running;
+    }
+}</code></pre>
+            <p>The first functions provide a small interface around local storage. <code>getScraper()</code> loads the scraper configuration and converts the stored JSON string back into a JavaScript object.</p>
+            <p><code>setScraper()</code> performs the opposite operation. It receives a JavaScript object, converts it to JSON with <code>JSON.stringify()</code>, and stores it in local storage.</p>
+            <p>The other two functions provide convenient checks. <code>scraperExists()</code> tells us whether a scraper configuration exists, while <code>scraperIsRunning()</code> checks the <code>running</code> flag.</p>
+            <p>The <code>DELAY</code> constant controls how long the scraper waits between navigations. A delay is useful because our scraper is navigating through a real website and should not immediately fire one navigation after another.</p>
+            <h3>Generating CSS Selectors</h3>
+            <pre><code>function getCssSelector(element, all) {
+    if (element.id && !all) return `#${CSS.escape(element.id)}`;
+    let path = [];
+    while (element && element.nodeType === Node.ELEMENT_NODE) {
+        let selector = element.tagName.toLowerCase();
+        if (element.classList.length &gt; 0) {
+            selector += [...element.classList]
+                .map(cls =&gt; `.${CSS.escape(cls)}`)
+                .join("");
+        } if (!all &amp;&amp; document.querySelectorAll(selector).length === 1) {
+            path.unshift(selector);
+            break;
+        } if (!all) {
+            let sibling = element;
+            let index = 1;
+            while (sibling = sibling.previousElementSibling) {
+                if (sibling.tagName === element.tagName) {
+                    index++;
+                }
+            } selector += `:nth-of-type(${index})`;
+        } path.unshift(selector);
+        element = element.parentElement;
+    } return path.join(" &gt; ");
+}</code></pre>
+            <p><code>getCssSelector()</code> is one of the key functions behind our visual selector system. Given an HTML element, it attempts to construct a CSS selector that can later be used to find that element again.</p>
+            <p>The function first checks whether the element has an ID. If it does, the ID can provide a very simple selector such as <code>#price</code>.</p>
+            <p>If there is no suitable ID, the function walks up through the element's parents and builds a selector from the element's tag name and CSS classes. If necessary, it adds <code>:nth-of-type()</code> information to distinguish the element from other elements of the same type.</p>
+            <p>The individual parts are collected in the <code>path</code> array and finally joined with <code>&gt;</code>. The result might look something like <code>body &gt; div &gt; article &gt; h2</code>.</p>
+            <p>The <code>all</code> parameter changes this behavior slightly. When it is false, the function tries to create a selector that identifies a particular element. When working with selectors intended to match multiple elements, the function can instead build a less restrictive selector.</p>
+            <p>This function is what allows the user interface to turn a mouse click on a real HTML element into a selector that can be saved in the scraper configuration.</p>
+            <h3>Finding Listing URLs</h3>
+            <pre><code>function extractListingUrls(cardUrlSelector) {
+    let listingUrls = "";
+    for (let card of document.querySelectorAll(cardUrlSelector))
+      listingUrls += card.href + "\n";
+    return listingUrls;
+}</code></pre>
+            <p><code>extractListingUrls()</code> is primarily used while configuring the scraper. It takes the selector for listing cards and finds all matching elements on the current page.</p>
+            <p>Each matching element is expected to be a link, so its <code>href</code> is added to the result. The function returns the URLs as a string so the UI can display them to the user during the preview and configuration process.</p>
+            <h3>Finding the Next Page</h3>
+            <pre><code>function extractNextPage(nextPageSelector) {
+    try { return document.querySelector(nextPageSelector); }
+    catch(e) { return ""; }
+}</code></pre>
+            <p><code>extractNextPage()</code> finds the element responsible for pagination. Unlike <code>extractListingUrls()</code>, it returns the actual DOM element rather than its URL.</p>
+            <p>This is important because different websites can implement pagination differently. The next page might be an ordinary link with an <code>href</code>, or it might be a button that requires JavaScript to be executed. The scraper handles both cases later.</p>
+            <h3>Extracting Data</h3>
+            <pre><code>function extractData() {
+    let scraper = getScraper();
+    let data = {};
+    try {
+        for (let key of Object.keys(scraper.selectors)) {
+            let selector = document.querySelector(scraper.selectors[key]);
+            selector.style.outline = "2px solid green";
+            data[key] = selector.textContent.trim();
+        }
+        return data;
+    } catch(e) { return {}; }
+}</code></pre>
+            <p><code>extractData()</code> is where our configured field selectors become actual scraped data. The function reads the <code>selectors</code> object from the scraper configuration and loops through each named selector.</p>
+            <p>For every selector, <code>document.querySelector()</code> finds the corresponding element. Its text is then cleaned with <code>trim()</code> and stored under the selector's name.</p>
+            <p>For example, if the configuration contains <code>"title"</code> and <code>"price"</code>, the resulting object might look like this:</p>
+            <pre><code>{
+    "title": "Beautiful apartment in Madrid",
+    "price": "€350,000"
+}</code></pre>
+            <p>The green outline is also applied to the extracted element. This gives us visual feedback when previewing the data and makes it immediately obvious which elements are being used.</p>
+            <h3>Discovering Listings</h3>
+            <pre><code>function parseLinks(scraper) {
+    let linkSelectors = document.querySelectorAll(scraper.cardUrlSelector);
+    for (let url of linkSelectors) scraper.listingUrls.push(url.href);
+}</code></pre>
+            <p><code>parseLinks()</code> is the crawling version of <code>extractListingUrls()</code>. Instead of returning a string for display, it adds every discovered listing URL directly to the scraper's <code>listingUrls</code> array.</p>
+            <p>This is the first major step of our crawling process. We arrive on a listing page, find all of its individual listings, and save their URLs so they can be processed one by one.</p>
+            <h3>Parsing an Individual Listing</h3>
+            <pre><code>function parseListing(scraper) {
+    try {
+        let data = extractData();
+        console.log(JSON.stringify(data, null, 4))
+        console.log("\nCurrent page:", scraper.currentPage);
+        scraper.data.push(data)
+    } catch(e) {}
+}</code></pre>
+            <p><code>parseListing()</code> is responsible for processing one individual listing. It calls <code>extractData()</code>, prints the result to the browser console for debugging, and then adds the extracted object to the scraper's <code>data</code> array.</p>
+            <p>Notice how little website-specific logic exists here. The function does not know whether the field is a title, price, address, or something else. The selectors stored in the scraper configuration determine what gets extracted.</p>
+            <h3>Waiting Between Pages</h3>
+            <pre><code>async function sleep(ms) {
+    return new Promise(resolve =&gt; setTimeout(resolve, ms));
+}</code></pre>
+            <p>The <code>sleep()</code> helper pauses the asynchronous crawling process for the requested number of milliseconds. It is used before navigating to another page so that the scraper does not immediately jump from one page to another.</p>
+            <h3>The Crawl Function</h3>
+            <pre><code>async function crawl() {
+    let scraper = getScraper();
+    if (scraper == null) return;
+    else if (scraper.running) {
+        if (scraper.currentPage == location.href) {
+            scraper.currentPage = "";
+            if (scraper.nextPageSelector.includes("button")) {
+                document.querySelector(scraper.nextPageSelector).click();
+                location.reload();
+            } else location.href = document.querySelector(scraper.nextPageSelector).href
+            return;
+        } else if (scraper.listingUrls.length == 0) {
+            parseLinks(scraper);
+            scraper.currentPage = location.href;
+            setScraper(scraper);
+        } else parseListing(scraper);
+        scraper.listingUrlIndex++;
+        setScraper(scraper);
+        if (scraper.listingUrlIndex == scraper.listingUrls.length) {
+            scraper.listingUrls = [];
+            scraper.listingUrlIndex = -1;
+            localStorage.setItem("scraper", JSON.stringify(scraper));
+            await sleep(DELAY);
+            location.href = scraper.currentPage;
+        } else {
+            await sleep(DELAY);
+            location.href = scraper.listingUrls[scraper.listingUrlIndex]
+        }
+    }
+}; crawl();</code></pre>
+            <p>The <code>crawl()</code> function is the heart of <code>scraper.js</code>. It ties all the previous functions together and implements the listing website model we introduced earlier.</p>
+            <p>First, the function loads the scraper configuration. If there is no scraper, there is nothing to do. If the scraper exists but <code>running</code> is false, the function also does nothing.</p>
+            <h3>Returning to the Listing Page</h3>
+            <pre><code>if (scraper.currentPage == location.href) {
+    scraper.currentPage = "";
+    if (scraper.nextPageSelector.includes("button")) {
+        document.querySelector(scraper.nextPageSelector).click();
+        location.reload();
+    } else location.href = document.querySelector(scraper.nextPageSelector).href
+    return;
+}</code></pre>
+            <p>The first important branch checks whether we have returned to the listing page stored in <code>currentPage</code>. This means that all listings from that page have been processed.</p>
+            <p>The scraper then moves to the next listing page. If the configured selector identifies a button, it clicks that button and reloads the page. Otherwise, it assumes the element is a link and navigates directly to its <code>href</code>.</p>
+            <p>This small distinction is useful because pagination is not implemented consistently across websites. Some sites use ordinary links, while others use buttons controlled by JavaScript.</p>
+            <h3>Discovering the Listings</h3>
+            <pre><code>else if (scraper.listingUrls.length == 0) {
+    parseLinks(scraper);
+    scraper.currentPage = location.href;
+    setScraper(scraper);
+} else parseListing(scraper);</code></pre>
+            <p>If we are not returning from the individual listings and the <code>listingUrls</code> array is empty, we must be on a new listing page. The scraper calls <code>parseLinks()</code> to discover the listing URLs and remembers the current page.</p>
+            <p>On subsequent page loads, the array is no longer empty, so the scraper knows that it is currently processing one of the individual listings. It therefore calls <code>parseListing()</code>.</p>
+            <p>This is a particularly useful part of the design. The scraper does not need a complicated external crawler queue to know what it should be doing. The state stored in local storage tells it where it is in the process.</p>
+            <h3>Moving Through the Listings</h3>
+            <pre><code>scraper.listingUrlIndex++;
+setScraper(scraper);
+if (scraper.listingUrlIndex == scraper.listingUrls.length) {
+    scraper.listingUrls = [];
+    scraper.listingUrlIndex = -1;
+    localStorage.setItem("scraper", JSON.stringify(scraper));
+    await sleep(DELAY);
+    location.href = scraper.currentPage;
+} else {
+    await sleep(DELAY);
+    location.href = scraper.listingUrls[scraper.listingUrlIndex]
+}</code></pre>
+            <p>After processing a listing, <code>listingUrlIndex</code> is incremented and the updated state is saved.</p>
+            <p>If the index has reached the end of the URL array, the scraper has finished all listings from the current page. It clears the URL list, resets the index, waits for the configured delay, and returns to <code>currentPage</code>.</p>
+            <p>If there are still URLs left, the scraper waits and navigates directly to the next listing URL.</p>
+            <h3>The Browser as the Crawler</h3>
+            <p>This is the key difference between this implementation and the Scrapy example. In Scrapy, the framework manages requests, responses, and the crawling queue. Here, the browser itself performs the navigation.</p>
+            <p>Every time <code>location.href</code> changes, the current page is left and a new page loads. The extension's content scripts are injected again, <code>crawl()</code> runs again, and the scraper reads its state from local storage to determine what should happen next.</p>
+            <p>In other words, page navigation becomes part of the crawler's control flow. The browser repeatedly loads pages, while local storage allows the scraper to remember what happened before the current page was loaded.</p>
+            <div class="note">
+                <div class="note-title">The Complete Loop</div>
+                <p>Listing page → discover listing URLs → save state → open listing → extract data → move to next listing → return to listing page → move to next listing page → repeat.</p>
+            </div>
+            <p>That loop is the core of our browser-based scraper. Everything we have built around it — the popup, configuration, selectors, visual interface, and storage management — exists to make this loop configurable and practical to use.</p>
+            <nav class="chapter-nav-bottom">
+                <a href="ui.html">← Previous</a>
+                <a href="testing.html" class="next">Next →</a>
+            </nav>
+        </article>
+    </main>
+</body>
+</html>
