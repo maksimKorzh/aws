@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Afterword — AWS</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+<body>
+    <main class="book">
+        <article class="chapter">
+            <nav class="chapter-nav">
+                <a href="../index.html">← Contents</a>
+            </nav>
+            <div class="chapter-label">Chapter 11</div>
+            <h2>Afterword</h2>
+            
+    <p>If you have reached this point, you have seen the complete idea behind Alternative Web Scraping.</p>
+    <p>We started with the fundamentals of how data appears on the web, looked at the structure of listing websites, built a Chrome extension, introduced browser storage, created a visual selector system, separated the user interface from the scraping engine, and finally built a crawler that uses browser navigation itself as part of its control flow.</p>
+    <p>The result is not simply a collection of scraping techniques. It is a different way of thinking about where a scraper should live.</p>
+    <p>Traditional scraping normally puts the scraper outside the browser and asks it to reproduce what a browser does. Our approach puts the scraper inside the browser and lets the browser handle the things it is already designed to handle: HTTP requests, cookies, sessions, JavaScript, redirects, rendering, DOM manipulation, and navigation.</p>
+    <p>That does not make browser-based scraping universally better. In fact, it is important to understand where this approach makes sense.</p>
+    <h3>When to Use Browser-Based Scraping</h3>
+    <p>The main reason I developed this approach is anti-scraping protection. When a website actively tries to distinguish automated requests from normal browser activity, building an external scraper that imitates the browser can become increasingly complicated.</p>
+    <p>Running the scraper inside the actual browser can remove an entire category of those problems because we are no longer trying to reproduce the browser from the outside.</p>
+    <p>But if a website has no meaningful anti-scraping protection, or its protection is weak, I would normally choose the traditional approach instead. A conventional Scrapy spider is often simpler, faster and more appropriate for large-scale crawling.</p>
+    <p>In other words, browser-based scraping is not a replacement for traditional scraping. It is another tool for situations where the traditional approach becomes unnecessarily difficult.</p>
+    <div class="note">
+        <div class="note-title">Choose the Right Tool</div>
+        <p>If a simple HTTP request and a normal parser can do the job, use them. If the website requires a real browser environment and traditional scraping becomes unreliable, browser-based scraping becomes an interesting alternative. Good scraping engineering is not about using the most sophisticated technique everywhere. It is about choosing the simplest technique that reliably solves the problem.</p>
+    </div>
+    <h3>Why I Wrote This Book</h3>
+    <p>There is also a more practical reason this book exists.</p>
+    <p>I wrote it because I am interested in working with people who need this kind of expertise.</p>
+    <p>I have spent many years working with web scraping, and I would rather demonstrate what I can actually build than make a long list of technologies or qualifications. This book is essentially a technical demonstration of how I think about scraping problems, how I design systems, and how I approach reliability and maintainability.</p>
+    <p>If you are working on a project that requires web data and you think my experience could be useful, you are welcome to contact me.</p>
+    <h3>How I Prefer to Work</h3>
+    <p>Over the years, I have found that I work best under a relatively simple arrangement.</p>
+    <p>I generally work directly with clients rather than through Upwork or similar freelance platforms. Payments are made directly through PayPal, which keeps the relationship straightforward and avoids unnecessary platform overhead.</p>
+    <p>I also prefer not to work in large teams with constant meetings, layers of management, or a calendar filled with status calls. My work is primarily technical, so I prefer communication that is direct and focused on the actual problem being solved.</p>
+    <p>For the same reason, I generally prefer a long-term relationship with one client rather than constantly switching between many unrelated short-term projects. Stable communication gives me time to understand a client's requirements, learn the structure of their data sources, build reliable scrapers, and maintain them as websites change.</p>
+    <p>This is not intended to suggest that every client or project should work this way. It is simply the working arrangement in which I have found that I can produce my best work.</p>
+    <h3>Professional Independence</h3>
+    <p>There is one other principle that is important to me: I prefer to define the technical and working terms of a project clearly from the beginning.</p>
+    <p>When someone hires an experienced specialist, they are not only paying for the hours spent typing code. They are paying for accumulated knowledge, problem-solving ability, and the judgment required to choose an appropriate solution.</p>
+    <p>Because of that, I value professional independence. I am happy to discuss requirements, constraints, priorities and reasonable changes. I am also open to ideas and suggestions when they improve the result.</p>
+    <p>At the same time, I do not want a working relationship based on pressure, unnecessary control, or attempts to manipulate the terms after the work has begun. I prefer straightforward agreements where both sides understand what is expected and respect each other's expertise.</p>
+    <p>For me, a good client relationship is simple: the client explains what they need, I explain how I intend to solve it, we agree on the terms, and then I get to work.</p>
+    <h3>Pricing</h3>
+    <p>My standard rate is <strong>$50 per hour</strong>.</p>
+    <p>As a rough reference, a normal Scrapy spider for one category on a website typically consumes around this amount of work. A project involving several categories on the same website is often around <strong>$200</strong>, depending on the site's structure and the exact requirements.</p>
+    <p>These numbers are intended as practical reference points rather than rigid quotes for every possible project. A website with complicated navigation, dynamic content, authentication, unusual data requirements, or significant anti-scraping protection can require considerably more work than a straightforward site.</p>
+    <p>I prefer to look at the actual website and requirements before agreeing to a final scope. That keeps the estimate realistic for both sides.</p>
+    <h3>Supporting the Project</h3>
+    <p>If you found this book useful, learned something from it, or simply appreciate the work that went into creating it, you can also support the project with a donation via PayPal:</p>
+    <p><strong>PayPal: maksymkorzh@gmail.com</strong></p>
+    <p>There is no obligation, of course. The book is here because I wanted to document the approach and make the knowledge available. A donation is simply a way to support the time and effort that goes into maintaining and developing projects like this.</p>
+    <h3>And Finally</h3>
+    <p>The most important idea I hope you take away from this book is not a particular JavaScript function, CSS selector, Chrome API, or scraping trick.</p>
+    <p>It is the idea that scraping architecture should adapt to the problem.</p>
+    <p>If a simple request works, use a simple request. If Scrapy is the right tool, use Scrapy. If a website requires JavaScript, use a browser. If traditional automation struggles because the website is actively trying to distinguish automated clients, consider putting the scraper inside the browser itself.</p>
+    <p>The browser-based scraper we built here is one possible answer to one particular class of problems. It is not magic, and it is not the future of every scraper. But when the browser is already doing exactly what we need, there is something appealing about letting the browser do the work instead of spending our time trying to imitate it.</p>
+    <p>Thank you for reading.</p>
+    <p>And if you have a difficult scraping problem, perhaps we will work on it together.</p>
+
+            <nav class="chapter-nav-bottom">
+                <a href="testing.html">← Previous</a>
+                <a href="../index.html" class="next">CONTENTS →</a>
+            </nav>
+        </article>
+    </main>
+</body>
+</html>
